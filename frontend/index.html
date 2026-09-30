@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIRFE — Sistema Interoperable de Identificación y Reunificación Familiar</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Leaflet (mapas) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- face-api.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/dist/face-api.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header>
+    <div class="logo-area">
+      <div class="logo-icon">S</div>
+      <div class="logo-text">
+        <h1>SIRFE</h1>
+        <span>Sistema Interoperable de Identificación y Reunificación Familiar</span>
+      </div>
+    </div>
+    <nav id="mainNav" style="display:none;">
+      <button data-screen="dashboard" class="active">Dashboard</button>
+      <button data-screen="register">Registro de menor</button>
+      <button data-screen="verify">Verificación adulto</button>
+      <button data-screen="map">Mapa de centros</button>
+      <button data-screen="settings">Configuración</button>
+      <button id="btnLogout">Cerrar sesión</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- LOGIN -->
+    <section id="login" class="screen active">
+      <div class="login-container">
+        <div class="card">
+          <div class="login-icon">🔒</div>
+          <h2>Acceso de operador</h2>
+          <p class="subtitle">Centro de acopio — acceso restringido</p>
+          <div class="form-group" style="text-align:left; margin-bottom:14px;">
+            <label>Usuario</label>
+            <input type="text" id="loginUser" value="operador.centro">
+          </div>
+          <div class="form-group" style="text-align:left; margin-bottom:18px;">
+            <label>Contraseña</label>
+            <input type="password" id="loginPass" value="********">
+          </div>
+          <button class="btn btn-primary" style="width:100%;" id="btnLogin">Ingresar al sistema</button>
+          <div class="status-bar" id="loginStatus" style="justify-content:center; margin-top:14px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="screen">
+      <div class="card">
+        <h2>Dashboard general</h2>
+        <p class="subtitle">Menores registrados en el sistema</p>
+        <div id="dashboardContent">
+          <div class="empty"><span>📋</span>Cargando…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REGISTRO -->
+    <section id="register" class="screen">
+      <div class="card">
+        <h2>Registro de menor no acompañado</h2>
+        <p class="subtitle">Complete los datos del menor y registre su fotografía.</p>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nombre completo</label>
+            <input type="text" id="regName" placeholder="Ej. Sofía Ramírez López">
+          </div>
+          <div class="form-group">
+            <label>Edad estimada</label>
+            <input type="number" id="regAge" min="1" max="17" placeholder="8">
+          </div>
+          <div class="form-group">
+            <label>Sexo</label>
+            <select id="regSex">
+              <option value="F">Femenino</option>
+              <option value="M">Masculino</option>
+              <option value="O">Otro / No especificado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Centro de acopio</label>
+            <select id="regCenter">
+              <option>Centro Temporal “Esperanza” – Zona Norte</option>
+              <option>Refugio Municipal “Unidos” – Zona Centro</option>
+              <option>Puesto de Avanzada Cruz Roja – Sector Este</option>
+              <option>Escuela Temporal “Nuevo Amanecer”</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>Núcleo familiar declarado</label>
+            <textarea id="regFamily" placeholder="Madre: Ana López García&#10;Padre: Carlos Ramírez Soto&#10;Hermano: Mateo Ramírez López (12 años)"></textarea>
+          </div>
+          <div class="form-group full">
+            <label>Observaciones / señas particulares</label>
+            <input type="text" id="regNotes" placeholder="Ej. Cicatriz pequeña en ceja izquierda">
+          </div>
+        </div>
+
+        <div style="margin-top:22px;">
+          <label style="display:block; margin-bottom:8px;">Fotografía del menor</label>
+          <div class="photo-area">
+            <div id="regPhotoPreview" class="photo-preview placeholder">Sin foto</div>
+            <div class="btn-group" style="margin-top:0;">
+              <button type="button" class="btn btn-outline" id="btnRegCamera">📷 Usar cámara</button>
+              <button type="button" class="btn btn-outline" id="btnRegPlaceholder">🖼️ Usar imagen de referencia</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-primary" id="btnSaveMinor">Registrar menor</button>
+          <button class="btn btn-outline" id="btnClearReg">Limpiar formulario</button>
+        </div>
+        <div class="status-bar" id="regStatus"></div>
+      </div>
+    </section>
+
+    <!-- VERIFICACIÓN -->
+    <section id="verify" class="screen">
+      <div class="card">
+        <h2>Verificación de adulto reclamante</h2>
+        <p class="subtitle">Seleccione el menor y capture la fotografía del adulto para la comparación facial.</p>
+
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Menor a reclamar</label>
+            <select id="verifyMinorSelect">
+              <option value="">— Seleccione un menor registrado —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Nombre del adulto</label>
+            <input type="text" id="verAdultName" placeholder="Ej. Ana López García">
+          </div>
+          <div class="form-group">
+            <label>Parentesco declarado</label>
+            <select id="verRelation">
+              <option>Madre</option>
+              <option>Padre</option>
+              <option>Tutor legal</option>
+              <option>Abuelo/a</option>
+              <option>Tío/a</option>
+              <option>Otro familiar</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Documento de identidad</label>
+            <input type="text" id="verDoc" placeholder="Ej. DNI 12.345.678">
+          </div>
+          <div class="form-group">
+            <label>Teléfono de contacto</label>
+            <input type="text" id="verPhone" placeholder="+54 11 5555-0000">
+          </div>
+        </div>
+
+        <div class="verify-photos">
+          <div>
+            <label style="display:block; margin-bottom:8px;">Foto registrada del menor</label>
+            <div class="photo-area">
+              <img id="verMinorPhoto" class="photo-preview" alt="Menor" style="display:none;">
+              <div id="verMinorPlaceholder" class="photo-preview placeholder">Seleccione un menor</div>
+            </div>
+          </div>
+          <div>
+            <label style="display:block; margin-bottom:8px;">Foto del adulto reclamante</label>
+            <div class="photo-area">
+              <div id="verAdultPreview" class="photo-preview placeholder">Sin foto</div>
+              <div class="btn-group" style="margin-top:0;">
+                <button type="button" class="btn btn-outline" id="btnVerCamera">📷 Capturar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-secondary" id="btnCompare" disabled>🔍 Ejecutar comparación facial</button>
+        </div>
+
+        <div class="result-box" id="compareResult">
+          <div id="resultTitle"></div>
+          <span class="pct" id="resultPct"></span>
+          <div id="resultMsg"></div>
+        </div>
+
+        <div class="status-bar" id="verStatus"></div>
+      </div>
+    </section>
+
+    <!-- MAPA -->
+    <section id="map" class="screen">
+      <div class="card">
+        <h2>Mapa de centros de acopio</h2>
+        <p class="subtitle">Ubicación de los centros activos en la zona de operación.</p>
+        <div id="mapContainer" style="height:480px; border-radius:10px; border:1px solid var(--border); z-index:1;"></div>
+        <div id="mapLegend" style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.9rem;"></div>
+      </div>
+    </section>
+
+    <!-- CONFIGURACIÓN -->
+    <section id="settings" class="screen">
+      <div class="card">
+        <h2>Configuración</h2>
+        <p class="subtitle">Gestión de datos del sistema.</p>
+
+        <div style="background:#f8fafc; border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:20px;">
+          <h3 style="color:var(--primary); font-size:1.05rem; margin-bottom:8px;">Estado de la base de datos</h3>
+          <div class="status-bar" id="settingsDbStatus">
+            <span class="dot"></span> Consultando…
+          </div>
+        </div>
+
+        <div style="background:#fdf6f0; border:1px solid #e8c9a0; border-radius:8px; padding:20px;">
+          <h3 style="color:var(--warning); font-size:1.05rem; margin-bottom:8px;">Borrar todos los datos</h3>
+          <p style="font-size:0.9rem; color:var(--muted); margin-bottom:16px;">
+            Elimina todos los menores registrados y sus fotografías. Esta acción no se puede deshacer.
+          </p>
+          <button class="btn" id="btnClearAll" style="background:var(--danger); color:white;">
+            🗑️ Borrar todos los datos
+          </button>
+          <div class="status-bar" id="clearStatus" style="margin-top:12px;"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Cámara -->
+  <div class="overlay" id="cameraOverlay">
+    <div class="overlay-content">
+      <h3 style="margin-bottom:12px; color:var(--primary);">Captura de fotografía</h3>
+      <video id="cameraVideo" class="camera-feed" autoplay playsinline muted></video>
+      <canvas id="cameraCanvas" class="hidden"></canvas>
+      <div class="btn-group" style="justify-content:center; margin-top:14px;">
+        <button class="btn btn-primary" id="btnCapture">Capturar</button>
+        <button class="btn btn-outline" id="btnCancelCam">Cancelar</button>
+      </div>
+      <p style="font-size:0.8rem; color:var(--muted); margin-top:10px;">
+        Permita el acceso a la cámara cuando el navegador lo solicite.
+      </p>
+    </div>
+  </div>
+
+  <footer>
+    SIRFE · Sistema Interoperable de Identificación y Reunificación Familiar
+  </footer>
+</body>
+</html>

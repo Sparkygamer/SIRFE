@@ -1,0 +1,11 @@
+﻿__pycache__/
+*.py[cod]
+.venv/
+venv/
+backend/sirfe_demo.db
+*.db
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.env
