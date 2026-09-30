@@ -2,9 +2,8 @@
 SIRFE Backend
 ====================
 Servidor Flask.
-- No autenticación real
 - Base de datos SQLite local
-- Sin conexión a sistemas operativos reales
+- API REST para menores y adultos
 """
 
 from flask import Flask, request, jsonify, send_from_directory
@@ -43,11 +42,24 @@ def init_db():
             reunified_at TEXT
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS adults (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            document_id TEXT,
+            phone TEXT,
+            relation_sought TEXT,
+            child_name_sought TEXT,
+            center TEXT,
+            notes TEXT,
+            photo TEXT,
+            status TEXT DEFAULT 'buscando',
+            registered_at TEXT
+        )
+    """)
     conn.commit()
     conn.close()
 
-
-# ---------- API ----------
 
 @app.route("/api/health")
 def health():
@@ -60,7 +72,6 @@ def health():
 
 @app.route("/api/login", methods=["POST"])
 def login():
-    """Login de operador."""
     data = request.get_json(silent=True) or {}
     username = data.get("username", "")
     return jsonify({
@@ -69,9 +80,9 @@ def login():
         "user": {
             "username": username or "operador.centro",
             "role": "operador_centro",
-            "center": "Centro Temporal “Esperanza” – Zona Norte"
+            "center": "Centro Temporal Esperanza - Zona Norte"
         },
-        "message": "Acceso concedido (simulado)"
+        "message": "Acceso concedido"
     })
 
 
@@ -131,7 +142,7 @@ def update_status(minor_id):
     data = request.get_json() or {}
     new_status = data.get("status")
     if new_status not in ("pendiente", "reunificado"):
-        return jsonify({"error": "status inválido"}), 400
+        return jsonify({"error": "status invalido"}), 400
 
     conn = get_db()
     reunified_at = datetime.utcnow().isoformat() + "Z" if new_status == "reunificado" else None
@@ -148,17 +159,62 @@ def update_status(minor_id):
     return jsonify({"success": True, "id": minor_id, "status": new_status})
 
 
+@app.route("/api/adults", methods=["GET"])
+def list_adults():
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM adults ORDER BY registered_at DESC"
+    ).fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/adults", methods=["POST"])
+def register_adult():
+    data = request.get_json()
+    if not data or not data.get("name"):
+        return jsonify({"error": "name es obligatorio"}), 400
+
+    adult_id = "A-" + uuid.uuid4().hex[:8].upper()
+    now = datetime.utcnow().isoformat() + "Z"
+
+    conn = get_db()
+    conn.execute("""
+        INSERT INTO adults (
+            id, name, document_id, phone, relation_sought,
+            child_name_sought, center, notes, photo, status, registered_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'buscando', ?)
+    """, (
+        adult_id,
+        data.get("name"),
+        data.get("document_id", ""),
+        data.get("phone", ""),
+        data.get("relation_sought", ""),
+        data.get("child_name_sought", ""),
+        data.get("center", ""),
+        data.get("notes", ""),
+        data.get("photo", ""),
+        now
+    ))
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "success": True,
+        "id": adult_id,
+        "message": f"Adulto {data.get('name')} registrado correctamente"
+    }), 201
+
+
 @app.route("/api/verify", methods=["POST"])
 def record_verification():
-    """
-    Registra el resultado de una verificación facial.
-    La comparación real se hace en el frontend con face-api.js.
-    """
     data = request.get_json() or {}
     minor_id = data.get("minor_id")
     similarity = data.get("similarity")
     passed = data.get("passed", False)
     adult_name = data.get("adult_name", "")
+    adult_id = data.get("adult_id")
 
     if not minor_id:
         return jsonify({"error": "minor_id requerido"}), 400
@@ -169,25 +225,31 @@ def record_verification():
             "UPDATE minors SET status = 'reunificado', reunified_at = ? WHERE id = ?",
             (datetime.utcnow().isoformat() + "Z", minor_id)
         )
+        if adult_id:
+            conn.execute(
+                "UPDATE adults SET status = 'reunificado' WHERE id = ?",
+                (adult_id,)
+            )
         conn.commit()
         conn.close()
 
     return jsonify({
         "success": True,
         "minor_id": minor_id,
+        "adult_id": adult_id,
         "similarity": similarity,
         "passed": passed,
         "adult_name": adult_name,
-        "message": "Verificación registrada en el sistema"
+        "message": "Verificacion registrada en el sistema"
     })
 
 
 @app.route("/api/admin/clear", methods=["DELETE"])
 def clear_all_data():
-    """Borra todos los menores y fotos."""
     conn = get_db()
-    cur = conn.execute("DELETE FROM minors")
-    deleted = cur.rowcount
+    cur_m = conn.execute("DELETE FROM minors")
+    cur_a = conn.execute("DELETE FROM adults")
+    deleted = cur_m.rowcount + cur_a.rowcount
     conn.commit()
     conn.close()
     return jsonify({
@@ -197,7 +259,6 @@ def clear_all_data():
     })
 
 
-# Servir el frontend
 @app.route("/")
 def index():
     return send_from_directory(app.static_folder, "index.html")
@@ -208,7 +269,6 @@ def static_files(path):
     return send_from_directory(app.static_folder, path)
 
 
-# Inicializar DB al arrancar (local y producción)
 init_db()
 
 if __name__ == "__main__":

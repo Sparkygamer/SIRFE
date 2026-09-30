@@ -29,7 +29,6 @@ body {
   line-height: 1.5;
 }
 
-/* Header */
 header {
   background: linear-gradient(135deg, var(--primary) 0%, #0a3a6b 100%);
   color: white;
@@ -99,7 +98,6 @@ nav button:disabled {
   cursor: not-allowed;
 }
 
-/* Main */
 main {
   max-width: 1100px;
   margin: 24px auto;
@@ -114,7 +112,6 @@ main {
   display: block;
 }
 
-/* Cards */
 .card {
   background: var(--card);
   border-radius: var(--radius);
@@ -136,7 +133,6 @@ main {
   margin-bottom: 22px;
 }
 
-/* Forms */
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -189,7 +185,6 @@ textarea {
   min-height: 70px;
 }
 
-/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -239,7 +234,6 @@ textarea {
   margin-top: 20px;
 }
 
-/* Login */
 .login-container {
   max-width: 420px;
   margin: 60px auto;
@@ -254,7 +248,6 @@ textarea {
   margin-bottom: 12px;
 }
 
-/* Photo area */
 .photo-area {
   display: flex;
   flex-direction: column;
@@ -297,7 +290,6 @@ canvas.hidden {
   display: none;
 }
 
-/* Results */
 .result-box {
   margin-top: 20px;
   padding: 18px;
@@ -329,7 +321,6 @@ canvas.hidden {
   margin: 8px 0;
 }
 
-/* Dashboard table */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -382,7 +373,6 @@ tr:hover td {
   border: 1px solid var(--border);
 }
 
-/* Status bar */
 .status-bar {
   font-size: 0.8rem;
   color: var(--muted);
@@ -414,7 +404,6 @@ tr:hover td {
   }
 }
 
-/* Empty state */
 .empty {
   text-align: center;
   padding: 40px 20px;
@@ -427,7 +416,6 @@ tr:hover td {
   margin-bottom: 10px;
 }
 
-/* Camera overlay */
 .overlay {
   position: fixed;
   inset: 0;
@@ -450,7 +438,6 @@ tr:hover td {
   max-width: 340px;
 }
 
-/* Verify photo grid */
 .verify-photos {
   margin-top: 22px;
   display: grid;
@@ -471,7 +458,6 @@ footer {
   color: var(--muted);
 }
 
-/* Map */
 #mapContainer {
   background: #e8eef5;
 }
