@@ -1,9 +1,9 @@
 """
-SIRFE Backend (Demo)
+SIRFE Backend
 ====================
-Servidor Flask de demostración.
+Servidor Flask.
 - No autenticación real
-- Base de datos SQLite local (solo para la demo)
+- Base de datos SQLite local
 - Sin conexión a sistemas operativos reales
 """
 
@@ -15,7 +15,7 @@ from datetime import datetime
 import uuid
 
 app = Flask(__name__, static_folder="../frontend", static_url_path="")
-CORS(app)  # Solo para demo local
+CORS(app)
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "sirfe_demo.db")
 
@@ -53,21 +53,21 @@ def init_db():
 def health():
     return jsonify({
         "status": "ok",
-        "message": "SIRFE Demo API — prototipo ilustrativo",
+        "message": "SIRFE API",
         "timestamp": datetime.utcnow().isoformat() + "Z"
     })
 
 
 @app.route("/api/login", methods=["POST"])
 def login():
-    """Login simulado. Siempre acepta las credenciales de demo."""
+    """Login de operador."""
     data = request.get_json(silent=True) or {}
     username = data.get("username", "")
     return jsonify({
         "success": True,
-        "token": "demo-token-" + str(uuid.uuid4())[:8],
+        "token": "token-" + str(uuid.uuid4())[:8],
         "user": {
-            "username": username or "operador.demo",
+            "username": username or "operador.centro",
             "role": "operador_centro",
             "center": "Centro Temporal “Esperanza” – Zona Norte"
         },
@@ -150,6 +150,10 @@ def update_status(minor_id):
 
 @app.route("/api/verify", methods=["POST"])
 def record_verification():
+    """
+    Registra el resultado de una verificación facial.
+    La comparación real se hace en el frontend con face-api.js.
+    """
     data = request.get_json() or {}
     minor_id = data.get("minor_id")
     similarity = data.get("similarity")
@@ -174,13 +178,13 @@ def record_verification():
         "similarity": similarity,
         "passed": passed,
         "adult_name": adult_name,
-        "message": "Verificación registrada en el sistema (demo)"
+        "message": "Verificación registrada en el sistema"
     })
 
 
 @app.route("/api/admin/clear", methods=["DELETE"])
 def clear_all_data():
-    """Borra TODOS los menores y fotos de la base de datos de la demo."""
+    """Borra todos los menores y fotos."""
     conn = get_db()
     cur = conn.execute("DELETE FROM minors")
     deleted = cur.rowcount
@@ -189,7 +193,7 @@ def clear_all_data():
     return jsonify({
         "success": True,
         "deleted": deleted,
-        "message": f"Se eliminaron {deleted} registros. Base de datos de la demo limpia."
+        "message": f"Se eliminaron {deleted} registros. Base de datos limpia."
     })
 
 
@@ -204,11 +208,13 @@ def static_files(path):
     return send_from_directory(app.static_folder, path)
 
 
+# Inicializar DB al arrancar (local y producción)
+init_db()
+
 if __name__ == "__main__":
-    init_db()
+    port = int(os.environ.get("PORT", 5000))
     print("=" * 60)
-    print("  SIRFE Demo Backend")
-    print("  Prototipo ilustrativo — sin datos reales")
-    print("  Abre: http://127.0.0.1:5000")
+    print("  SIRFE Backend")
+    print(f"  http://0.0.0.0:{port}")
     print("=" * 60)
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False)
